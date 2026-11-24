@@ -31,6 +31,13 @@ const DAILY_VARIABLES = [
   "precipitation_probability_max",
 ] as const;
 
+function parseHttpDate(value: string | null): string | null {
+  if (!value) return null;
+  const epoch = Date.parse(value);
+  if (!Number.isFinite(epoch) || epoch <= 0) return null;
+  return new Date(epoch).toISOString();
+}
+
 type CooldownState = {
   until: number;
   level: 1 | 2;
@@ -112,7 +119,8 @@ export async function getPhilippineForecast(
       elapsedMs: Math.max(0, Date.now() - startedAt),
     });
 
-    return { ok: true, value: forecast };
+    const sourceResponseTime = parseHttpDate(response.headers.get("date"));
+    return { ok: true, value: { ...forecast, sourceResponseTime } };
   } catch (error) {
     const timedOut = error instanceof Error && error.name === "TimeoutError";
     console.warn("[weathercast] forecast_request_failed", {
