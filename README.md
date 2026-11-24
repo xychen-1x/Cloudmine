@@ -10,7 +10,7 @@ Fresh implementation from `main`; unrelated to closed PR #1.
 
 ## Requirements
 
-- Node.js 20.9 or newer
+- Node.js 22.x
 - npm
 - Gemini API key for the primary provider
 - Optional Groq API key for fallback only
