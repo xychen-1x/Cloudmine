@@ -76,7 +76,7 @@ export async function getPhilippineForecast(
     });
 
     if (response.status === 429) {
-      const nextLevel: 1 | 2 = cooldown?.level === 1 ? 2 : 1;
+      const nextLevel: 1 | 2 = cooldown ? 2 : 1;
       const retryAfterSeconds = nextLevel === 1 ? 60 : 300;
       rateLimitCooldowns.set(location.id, {
         until: Date.now() + retryAfterSeconds * 1_000,
