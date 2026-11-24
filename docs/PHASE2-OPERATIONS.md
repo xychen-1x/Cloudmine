@@ -47,16 +47,23 @@ Official references:
 - https://vercel.com/docs/incremental-static-regeneration/request-collapsing
 - https://vercel.com/docs/incremental-static-regeneration
 
-## Freshness and stale-data handling
+## API response age and weather valid time
 
-The UI derives source age from Open-Meteo's `current.time` and the returned IANA timezone. It does not mislabel the page render time or cache read time as the model's data timestamp.
+The implementation keeps two different timestamps separate:
 
-- Up to 60 minutes: fresh.
-- 61–90 minutes: visibly delayed.
+- Open-Meteo `current.time` is the **valid time**: the moment at which the current weather values apply. It is displayed as “Valid time” and is not used to calculate age.
+- The `Date` HTTP response header is parsed and stored as `sourceResponseTime`. RFC 9110 defines this header as the origination time of the HTTP message. The UI uses it only to calculate **how old the Open-Meteo API response is**, not how old the underlying weather-model run is.
+
+The Open-Meteo Best Match Forecast API does not identify the model run used for each location in its documented response. Open-Meteo's model metadata page also warns that per-model update times do not directly correlate with Forecast API updates because Best Match automatically selects a model for each location. Therefore Weathercast does not claim to know the selected model's initialization age.
+
+The response-age policy is:
+- Up to 60 minutes: recent API response.
+- 61–90 minutes: visibly aged API response.
 - More than 90 minutes: suppress the current-conditions panel.
-- More than six hours or an unparseable/far-future timestamp: suppress hourly and daily forecast panels.
+- More than six hours: suppress hourly and daily forecast panels.
+- Missing, invalid, or substantially future-dated HTTP `Date` header: response age is unknown, so current and forecast values are hidden rather than labelled recent.
 
-The displayed model timestamp is local to the selected location. The browser recalculates age every minute so a cached page cannot keep displaying an unchanged freshness badge as time passes. When data is unavailable or too old, the UI says so rather than inventing values.
+The browser recalculates response age every minute. Next.js Data Cache and the page's ISR cache retain/reuse the response data; the original response timestamp must age with that cached data rather than being replaced by the page-render time. Verify this behavior on the protected Preview before relying on it operationally.
 
 ## Public location-search endpoint risk
 
