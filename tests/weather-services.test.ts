@@ -73,6 +73,7 @@ describe("Open-Meteo request construction", () => {
 
     const result = await searchPhilippineLocations(" Manila ");
     expect(result.ok).toBe(true);
+    expect(result.ok && result.value.sourceResponseTime).toBe("2026-11-24T12:00:00.000Z");
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     const [requestUrl, options] = fetchMock.mock.calls[0] as [URL, RequestInit & { next?: { revalidate?: number } }];
@@ -85,7 +86,10 @@ describe("Open-Meteo request construction", () => {
   it("requests the approved 12 variables and caches a forecast for 600 seconds", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(openMeteoForecast()), {
       status: 200,
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        date: "Tue, 24 Nov 2026 12:00:00 GMT",
+      },
     }));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -107,6 +111,18 @@ describe("Open-Meteo request construction", () => {
     expect(requestUrl.searchParams.get("precipitation_unit")).toBe("mm");
     expect(options.next?.revalidate).toBe(FORECAST_REVALIDATE_SECONDS);
     expect(FORECAST_EQUIVALENT_CALL_WEIGHT).toBe(1.2);
+  });
+
+  it("does not invent a response timestamp when the HTTP Date header is absent", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(openMeteoForecast()), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await getPhilippineForecast({ ...location, id: 1701671 });
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.value.sourceResponseTime).toBeNull();
   });
 
   it("backs off for 60 seconds on the first 429 and 300 seconds after a repeated 429", async () => {
