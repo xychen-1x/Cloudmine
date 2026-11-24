@@ -99,3 +99,6 @@ The committed lockfile was audited using `npm audit --json` in GitHub Actions af
 - No automatic `npm audit fix --force`, Vitest upgrade, or dependency-range change was applied. The existing Dependabot Vitest upgrade remains a separate Owner decision because the approved Phase 2 specification excludes unapproved dependency upgrades. Before accepting that fix, regenerate the lockfile, verify the exact resolved Node and Vite compatibility, and rerun the complete CI and Preview checks.
 
 This audit does not indicate a vulnerability in the production dependency tree, but the development/test toolchain findings remain a known risk and are not being described as fixed.
+
+
+The 2026-11-24 audit found three advisories in the development/test dependency tree only: `vitest@3.2.7`, `@vitest/mocker@3.2.7`, and `tinypool@1.1.1`. No advisories were reported by `npm audit --omit=dev`. npm indicates the available remediation is a major upgrade to Vitest 5.1.1. No dependency upgrade has been applied; this remains an Owner decision, as documented above.
