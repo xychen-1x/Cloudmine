@@ -478,3 +478,5 @@ button { color: inherit; }
   font-weight: 600;
 }
 .error-actions button:hover, .error-actions a:hover { background: rgba(140, 228, 227, .15); }
+
+.hour-precipitation { margin: 5px 0 0; color: #7898ad; font-size: .67rem; }
