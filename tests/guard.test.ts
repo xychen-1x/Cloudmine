@@ -19,6 +19,7 @@ const parsedConfig = ts.getParsedCommandLineOfConfigFile(configPath, {}, {
   onUnRecoverableConfigFileDiagnostic: () => undefined,
 });
 if (!parsedConfig) throw new Error("Unable to parse the root TypeScript configuration.");
+const compilerOptions: ts.CompilerOptions = parsedConfig.options;
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -44,7 +45,7 @@ function isAI(file: string): boolean {
 }
 
 function resolve(from: string, specifier: string): string | undefined {
-  return ts.resolveModuleName(specifier, from, parsedConfig.options, ts.sys).resolvedModule?.resolvedFileName;
+  return ts.resolveModuleName(specifier, from, compilerOptions, ts.sys).resolvedModule?.resolvedFileName;
 }
 
 function inspect(): string[] {
