@@ -1,7 +1,8 @@
 import {afterEach,beforeEach,describe,expect,it,vi} from "vitest";
 import {validateLimits,LIMITS} from "../src/lib/ai/limits";
 import {runProviderChain} from "../src/lib/ai/orchestrator";
-import {redactCoordinates,sanitizeUserText} from "../src/lib/ai/sanitize";\nimport {buildAIRequest} from "../src/lib/ai/prompts";
+import {redactCoordinates,sanitizeUserText} from "../src/lib/ai/sanitize";
+import {buildAIRequest} from "../src/lib/ai/prompts";
 import type {AIProvider,AIRequest} from "../src/lib/ai/types";
 const req:AIRequest={systemPrompt:"system",userPrompt:"question"};
 const success=(name:"gemini"|"groq",text="Clear skies.")=>({ok:true as const,value:{text,model:name==="gemini"?"gemini-3.1-flash-lite":"openai/gpt-oss-20b",finishReason:"stop" as const}});
