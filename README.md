@@ -8,7 +8,7 @@ A non-commercial, ad-free, Philippines-first weather dashboard built with Next.j
 - View model-derived current conditions: temperature, feels-like temperature, humidity and WMO weather description.
 - View the next 24 hours: temperature, precipitation probability, precipitation amount and weather description.
 - View a seven-day forecast: daily high/low temperature, precipitation probability and weather description.
-- Show source timestamp and freshness state; hide current conditions after 90 minutes and hide forecasts when the model timestamp is older than six hours or cannot be verified.
+- Show the Open-Meteo HTTP response age separately from weather valid time; hide current conditions when the response is older than 90 minutes and forecasts when it is older than six hours or the response timestamp cannot be verified.
 - Use the Next.js Data Cache for geocoding (24-hour TTL candidate) and forecast data (600 seconds), with an on-demand ISR city page.
 - Keep the existing Phase 1 AI provider abstraction isolated. Phase 2 weather routes do not call Gemini or Groq and do not require AI API keys.
 
@@ -38,7 +38,7 @@ The build command runs lint, typecheck, unit tests and the production build boun
 
 ## Data sources, licence and attribution
 
-- Weather: Open-Meteo standard Forecast API. Weather data is provided under CC BY 4.0; the UI links to Open-Meteo and identifies the model timestamp.
+- Weather: Open-Meteo standard Forecast API. Weather data is provided under CC BY 4.0; the UI links to Open-Meteo and distinguishes weather valid time from HTTP response age. The Best Match endpoint does not expose the selected model run age.
 - Location search: Open-Meteo Geocoding API, which uses GeoNames data. The UI attributes GeoNames.
 - The Open-Meteo free/open-access API is for non-commercial use, has a 10,000 equivalent-call daily limit and 300,000 monthly limit, and has no uptime guarantee. Weathercast must remain non-commercial and ad-free under this integration.
 - Weathercast Phase 2 does not integrate PAGASA CAP alerts. Open-Meteo model values are not official PAGASA warnings.
