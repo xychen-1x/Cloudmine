@@ -4,7 +4,7 @@ import {
   parseLocationByIdResponse,
   parseLocationSearchResponse,
 } from "@/lib/weather/validation";
-import { getFreshnessState, getSourceAgeMinutes } from "@/lib/weather/freshness";
+import { getFreshnessState, getResponseAgeMinutes } from "@/lib/weather/freshness";
 import { describeWeatherCode } from "@/lib/weather/weather-codes";
 
 function location(id: number, countryCode = "PH") {
@@ -116,12 +116,12 @@ describe("Open-Meteo payload validation", () => {
 });
 
 describe("source freshness and weather codes", () => {
-  it("converts Philippine local model time to a real timestamp", () => {
+  it("calculates age from the HTTP response timestamp, independently of weather valid time", () => {
     const now = Date.UTC(2026, 10, 24, 13, 0);
-    expect(getSourceAgeMinutes("2026-11-24T20:00", "Asia/Manila", now)).toBe(60);
+    expect(getResponseAgeMinutes("2026-11-24T12:00:00.000Z", now)).toBe(60);
   });
 
-  it("applies the approved 60/90-minute current-data thresholds", () => {
+  it("applies the approved 60/90-minute response-age thresholds", () => {
     expect(getFreshnessState(60)).toBe("fresh");
     expect(getFreshnessState(61)).toBe("stale");
     expect(getFreshnessState(90)).toBe("stale");
@@ -129,10 +129,11 @@ describe("source freshness and weather codes", () => {
     expect(getFreshnessState(null)).toBe("unknown");
   });
 
-  it("does not label an invalid or far-future timestamp as fresh", () => {
+  it("does not label a missing, invalid, or far-future response timestamp as recent", () => {
     const now = Date.UTC(2026, 10, 24, 13, 0);
-    expect(getSourceAgeMinutes("not-a-time", "Asia/Manila", now)).toBeNull();
-    expect(getSourceAgeMinutes("2026-11-25T08:00", "Asia/Manila", now)).toBeNull();
+    expect(getResponseAgeMinutes(null, now)).toBeNull();
+    expect(getResponseAgeMinutes("not-a-time", now)).toBeNull();
+    expect(getResponseAgeMinutes("2026-11-25T08:00:00.000Z", now)).toBeNull();
   });
 
   it("maps documented WMO weather codes and safely handles unknown values", () => {
