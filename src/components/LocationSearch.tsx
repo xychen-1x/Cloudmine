@@ -47,7 +47,9 @@ export function LocationSearch() {
           { signal: controller.signal },
         );
 
+        if (controller.signal.aborted) return;
         const payload: SearchResponse = await response.json().catch(() => ({}));
+        if (controller.signal.aborted) return;
         if (!response.ok) {
           throw new Error(
             typeof payload.error === "string"
@@ -103,7 +105,13 @@ export function LocationSearch() {
           type="search"
           role="combobox"
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setLocations([]);
+            setError("");
+            setOpen(false);
+            setLoading(false);
+          }}
           onFocus={() => {
             if (query.trim().length >= 2) setOpen(true);
           }}
