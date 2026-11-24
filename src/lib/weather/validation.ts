@@ -26,16 +26,61 @@ function isWeatherCode(value: unknown): value is number | null {
   );
 }
 
+function hasValidCalendarDateTime(
+  year: number,
+  month: number,
+  day: number,
+  hour = 0,
+  minute = 0,
+  second = 0,
+): boolean {
+  if (
+    year < 1 || year > 9999 ||
+    month < 1 || month > 12 ||
+    day < 1 || day > 31 ||
+    hour < 0 || hour > 23 ||
+    minute < 0 || minute > 59 ||
+    second < 0 || second > 59
+  ) return false;
+
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
+  date.setUTCHours(hour, minute, second, 0);
+  return date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day &&
+    date.getUTCHours() === hour &&
+    date.getUTCMinutes() === minute &&
+    date.getUTCSeconds() === second;
+}
+
 function isLocalDateTime(value: unknown): value is string {
-  return typeof value === "string" &&
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(value) &&
-    !Number.isNaN(Date.parse(value));
+  if (typeof value !== "string") return false;
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(value);
+  if (!match) return false;
+  return hasValidCalendarDateTime(
+    Number(match[1]),
+    Number(match[2]),
+    Number(match[3]),
+    Number(match[4]),
+    Number(match[5]),
+    Number(match[6] ?? "0"),
+  );
 }
 
 function isLocalDate(value: unknown): value is string {
-  return typeof value === "string" &&
-    /^\d{4}-\d{2}-\d{2}$/.test(value) &&
-    !Number.isNaN(Date.parse(value));
+  if (typeof value !== "string") return false;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  return hasValidCalendarDateTime(
+    Number(match[1]),
+    Number(match[2]),
+    Number(match[3]),
+  );
+}
+
+function isStrictlyIncreasing(values: string[]): boolean {
+  return values.every((value, index) => index === 0 || values[index - 1] < value);
 }
 
 function isTimeZone(value: unknown): value is string {
@@ -177,7 +222,8 @@ export function parseForecastResponse(
   if (
     !Array.isArray(hourlyTimes) ||
     hourlyTimes.length < 24 ||
-    !hourlyTimes.every(isLocalDateTime)
+    !hourlyTimes.every(isLocalDateTime) ||
+    !isStrictlyIncreasing(hourlyTimes)
   ) {
     return null;
   }
@@ -217,7 +263,8 @@ export function parseForecastResponse(
   if (
     !Array.isArray(dailyTimes) ||
     dailyTimes.length < 7 ||
-    !dailyTimes.every(isLocalDate)
+    !dailyTimes.every(isLocalDate) ||
+    !isStrictlyIncreasing(dailyTimes)
   ) {
     return null;
   }
