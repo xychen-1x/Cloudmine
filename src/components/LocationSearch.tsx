@@ -33,18 +33,13 @@ export function LocationSearch() {
   useEffect(() => {
     const normalized = query.trim();
 
-    if (normalized.length < 2) {
-      setLocations([]);
-      setLoading(false);
-      setError("");
-      setOpen(false);
-      return;
-    }
+    if (normalized.length < 2) return;
 
     const controller = new AbortController();
     const timeout = window.setTimeout(async () => {
       setLoading(true);
       setError("");
+      setLocations([]);
 
       try {
         const response = await fetch(
@@ -94,6 +89,8 @@ export function LocationSearch() {
     router.push(`/weather/${location.id}`);
   }
 
+  const showResults = open && query.trim().length >= 2;
+
   return (
     <div className="location-search">
       <label className="sr-only" htmlFor="location-search-input">
@@ -104,6 +101,7 @@ export function LocationSearch() {
         <input
           id="location-search-input"
           type="search"
+          role="combobox"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           onFocus={() => {
@@ -114,12 +112,12 @@ export function LocationSearch() {
           maxLength={80}
           aria-autocomplete="list"
           aria-controls="location-search-options"
-          aria-expanded={open && locations.length > 0}
+          aria-expanded={showResults}
         />
         {loading ? <span className="search-state">Searching…</span> : null}
       </div>
 
-      {open && (locations.length > 0 || error || (!loading && query.trim().length >= 2)) ? (
+      {showResults && (locations.length > 0 || error || loading) ? (
         <div
           id="location-search-options"
           className="search-results"
