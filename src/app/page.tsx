@@ -1,13 +1,14 @@
+import Link from "next/link";
 import { LocationSearch } from "@/components/LocationSearch";
 
 export default function HomePage() {
   return (
     <main className="home-page">
       <header className="home-topbar">
-        <a className="brand" href="/" aria-label="Weathercast home">
+        <Link className="brand" href="/" aria-label="Weathercast home">
           <span className="brand-mark" aria-hidden="true">W</span>
           <span>weathercast</span>
-        </a>
+        </Link>
         <span className="region-pill">MADE FOR THE PHILIPPINES</span>
       </header>
 
