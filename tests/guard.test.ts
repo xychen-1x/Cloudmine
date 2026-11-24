@@ -68,6 +68,39 @@ function resolve(from: string, specifier: string): string | undefined {
   return ts.resolveModuleName(specifier, from, compilerOptions, ts.sys).resolvedModule?.resolvedFileName;
 }
 
+function isAIImportTarget(target: string): boolean {
+  return path.resolve(target).replaceAll(path.sep, "/").includes("/src/lib/ai/");
+}
+
+function hasForbiddenAIImport(sourceFile: ts.SourceFile, file: string): boolean {
+  let found = false;
+  const visit = (node: ts.Node): void => {
+    if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
+      const specifier = node.moduleSpecifier;
+      if (specifier && ts.isStringLiteral(specifier)) {
+        const target = resolve(file, specifier.text);
+        if (target && isAIImportTarget(target)) found = true;
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return found;
+}
+
+function hasServerActionDirective(sourceFile: ts.SourceFile): boolean {
+  let found = false;
+  const visit = (node: ts.Node): void => {
+    if ((ts.isSourceFile(node) || ts.isBlock(node)) && hasUseServerDirective(node)) {
+      found = true;
+      return;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return found;
+}
+
 function inspect(): string[] {
   const errors: string[] = [];
   for (const file of walk(root)) {
@@ -123,6 +156,12 @@ function inspect(): string[] {
       if (!isTest(file) && !isAI(file) && /lib[\\/]ai/.test(source)) {
         errors.push(rel + ": literal AI path");
       }
+      if (!isTest(file) && !isAI(file) && hasForbiddenAIImport(sf, file)) {
+        errors.push(rel + ": imports AI layer");
+      }
+      if (!isTest(file) && !isAI(file) && hasServerActionDirective(sf)) {
+        errors.push(rel + ": Server Action directive");
+      }
       if (/^next\.config\./.test(base) && /(alias|resolveAlias|webpack)/.test(source)) {
         errors.push(rel + ": Next alias/webpack config forbidden");
       }
@@ -135,9 +174,6 @@ function inspect(): string[] {
             const target = style ? undefined : resolve(file, spec.text);
             const builtin = builtins.has(spec.text) || builtins.has(spec.text.replace(/^node:/, ""));
             if (!target && !style && !builtin) errors.push(rel + ": unresolved import " + spec.text);
-            if (target && path.resolve(target).replaceAll(path.sep, "/").includes("/src/lib/ai/") && !isTest(file) && !isAI(file)) {
-              errors.push(rel + ": imports AI layer");
-            }
             if (target && isTest(target) && !isTest(file)) errors.push(rel + ": imports test file");
           }
         }
@@ -160,9 +196,6 @@ function inspect(): string[] {
 
         if (ts.isNewExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "Function" && !isTest(file)) {
           errors.push(rel + ": dynamic code execution");
-        }
-        if ((ts.isSourceFile(node) || ts.isBlock(node)) && hasUseServerDirective(node)) {
-          errors.push(rel + ": Server Action directive");
         }
         ts.forEachChild(node, visit);
       };
@@ -194,6 +227,29 @@ describe("AI boundary guard", () => {
     expect(hasUseServerDirective(moduleDirective)).toBe(true);
     expect(hasUseServerDirective(ordinaryString)).toBe(false);
     expect(fn && ts.isFunctionDeclaration(fn) && fn.body ? hasUseServerDirective(fn.body) : false).toBe(true);
+  });
+
+  it("detects deliberate prohibited import and Server Action fixtures", () => {
+    const source = (fileName: string, code: string) =>
+      ts.createSourceFile(fileName, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+    const appFile = path.join(root, "src/app/page.tsx");
+    const forbiddenImport = source(appFile, 'import { generate } from "../lib/ai";');
+    const safeImport = source(appFile, 'import { getForecast } from "../lib/weather/forecast";');
+    const serverAction = source(appFile, '"use server"; export async function action() {}');
+    const ordinaryString = source(appFile, 'const label = "use server";');
+
+    expect(hasForbiddenAIImport(forbiddenImport, appFile)).toBe(true);
+    expect(hasForbiddenAIImport(safeImport, appFile)).toBe(false);
+    expect(hasServerActionDirective(serverAction)).toBe(true);
+    expect(hasServerActionDirective(ordinaryString)).toBe(false);
+  });
+
+  it("keeps the public API allowlist narrow and server secrets out of bundles", () => {
+    const checker = fs.readFileSync(path.join(root, "scripts/check-build.mjs"), "utf8");
+    expect(checker).toContain('new Set(["/api/locations/route"])');
+    expect(checker).toContain("Unreviewed API route found");
+    expect(checker).toContain('["static", "server"]');
+    expect(checker).toContain("Configured secret value found in build output");
   });
 
   it("keeps unsupported source formats such as MDX classified as unknown", () => {
