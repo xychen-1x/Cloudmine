@@ -118,7 +118,8 @@ function readBuildManifest(file) {
 }
 
 const appManifest = readBuildManifest(path.join(scanRoot, "server/app-paths-manifest.json"));
-if (appManifest && Object.keys(appManifest).some((route) => /(^|\\/)api(\\/|$)/i.test(route))) {
+const apiRoutePattern = new RegExp("(^|/)api(/|$)", "i");
+if (appManifest && Object.keys(appManifest).some((route) => apiRoutePattern.test(route))) {
   throw new Error("API route found in build manifest.");
 }
 
