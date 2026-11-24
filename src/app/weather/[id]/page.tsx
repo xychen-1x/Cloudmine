@@ -3,7 +3,7 @@ import Link from "next/link";
 import { LocationSearch } from "@/components/LocationSearch";
 import { WeatherDashboard } from "@/components/WeatherDashboard";
 import { getPhilippineForecast } from "@/lib/weather/forecast";
-import { getSourceAgeMinutes } from "@/lib/weather/freshness";
+import { getResponseAgeMinutes } from "@/lib/weather/freshness";
 import { resolvePhilippineLocation } from "@/lib/weather/geocoding";
 import type { LocationSearchItem } from "@/lib/weather/types";
 
@@ -74,7 +74,7 @@ export default async function WeatherPage({
       <WeatherDashboard
         location={toPublicLocation(location)}
         forecast={forecast}
-        initialAgeMinutes={getSourceAgeMinutes(forecast.current.time, forecast.timezone)}
+        initialAgeMinutes={getResponseAgeMinutes(forecast.sourceResponseTime)}
       />
     </>
   );
