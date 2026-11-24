@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getFreshnessState, getSourceAgeMinutes } from "@/lib/weather/freshness";
+import { getFreshnessState, getResponseAgeMinutes } from "@/lib/weather/freshness";
 import { describeWeatherCode } from "@/lib/weather/weather-codes";
 import type {
   DailyWeather,
@@ -48,10 +48,10 @@ function precipitationLabel(value: number | null): string {
 }
 
 function freshnessCopy(state: ReturnType<typeof getFreshnessState>, age: number | null): string {
-  if (state === "fresh") return age === null ? "Fresh" : `Updated ${age} min ago`;
-  if (state === "stale") return age === null ? "Slightly delayed" : `Delayed · ${age} min old`;
-  if (state === "expired") return "Current data paused · too old";
-  return "Freshness could not be verified";
+  if (state === "fresh") return age === null ? "Response time unavailable" : `Open-Meteo response received ${age} min ago`;
+  if (state === "stale") return age === null ? "Response time unavailable" : `Open-Meteo response is aging · ${age} min old`;
+  if (state === "expired") return "Open-Meteo response is older than 90 minutes";
+  return "Open-Meteo response timestamp could not be verified";
 }
 
 function HourCard({ item }: { item: HourlyWeather }) {
@@ -98,7 +98,7 @@ export function WeatherDashboard({
   useEffect(() => {
     if (!forecast) return;
     const updateAge = () => {
-      setAgeMinutes(getSourceAgeMinutes(forecast.current.time, forecast.timezone));
+      setAgeMinutes(getResponseAgeMinutes(forecast.sourceResponseTime));
     };
     updateAge();
     const timer = window.setInterval(updateAge, 60_000);
@@ -143,15 +143,15 @@ export function WeatherDashboard({
           <section className={`freshness-banner freshness-${freshness}`} aria-live="polite">
             <span className="freshness-dot" aria-hidden="true" />
             <span>{freshnessCopy(freshness, ageMinutes)}</span>
-            <span className="freshness-time">Data timestamp: {formatTime(forecast.current.time)}</span>
+            <span className="freshness-time">Valid time: {formatTime(forecast.current.time)}</span>
           </section>
 
           {!currentCanBePresented ? (
             <section className="notice-card notice-warning" role="status">
               <h2>Current conditions are no longer shown</h2>
               <p>
-                The model timestamp is more than 90 minutes old or could not be verified.
-                We will not label old conditions as current.
+                The last Open-Meteo API response is more than 90 minutes old, or its response
+                timestamp could not be verified. We hide current conditions as a precaution.
               </p>
             </section>
           ) : (
@@ -181,7 +181,7 @@ export function WeatherDashboard({
                 </div>
                 <div className="detail-tile">
                   <span className="detail-symbol" aria-hidden="true">🕒</span>
-                  <span className="detail-label">Data timestamp</span>
+                  <span className="detail-label">Valid time</span>
                   <strong>{formatTime(forecast.current.time)}</strong>
                 </div>
               </div>
@@ -220,8 +220,8 @@ export function WeatherDashboard({
             <section className="notice-card notice-warning" role="status">
               <h2>Forecast temporarily hidden</h2>
               <p>
-                The last available model data is more than six hours old.
-                Refresh later for a newly validated forecast.
+                The last Open-Meteo API response is more than six hours old, or its response
+                timestamp could not be verified. We hide forecast values as a precaution.
               </p>
             </section>
           )}
@@ -233,7 +233,7 @@ export function WeatherDashboard({
           Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a>
           {" "}· Location data based on <a href="https://www.geonames.org/" target="_blank" rel="noreferrer">GeoNames</a>
         </p>
-        <p>Weathercast is non-commercial and ad-free. Model data is not an official PAGASA warning.</p>
+        <p>Weathercast is non-commercial and ad-free. Model run age is not exposed by the Open-Meteo Best Match response; this response-age indicator is not a model-age measurement. Model data is not an official PAGASA warning.</p>
       </footer>
     </main>
   );
