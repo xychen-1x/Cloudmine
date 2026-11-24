@@ -58,34 +58,23 @@ export default async function WeatherPage({
   const locationResult = await resolvePhilippineLocation(id);
   if (!locationResult.ok) {
     if (locationResult.error.code === "not_found") notFound();
-
-    return (
-      <main className="weather-page">
-        <PageHeader />
-        <section className="notice-card notice-error">
-          <h1>We could not verify this location</h1>
-          <p>{locationResult.error.message}</p>
-          <p>Please try the city search again.</p>
-        </section>
-      </main>
-    );
+    throw new Error("Unable to verify the selected Philippine location.");
   }
 
   const location = locationResult.value;
   const forecastResult = await getPhilippineForecast(location);
+  if (!forecastResult.ok) {
+    throw new Error("Weather data is temporarily unavailable. Please retry.");
+  }
 
+  const forecast = forecastResult.value;
   return (
     <>
       <PageHeader />
       <WeatherDashboard
         location={toPublicLocation(location)}
-        forecast={forecastResult.ok ? forecastResult.value : null}
-        initialAgeMinutes={
-          forecastResult.ok
-            ? getSourceAgeMinutes(forecastResult.value.current.time, forecastResult.value.timezone)
-            : null
-        }
-        errorMessage={forecastResult.ok ? undefined : forecastResult.error.message}
+        forecast={forecast}
+        initialAgeMinutes={getSourceAgeMinutes(forecast.current.time, forecast.timezone)}
       />
     </>
   );
