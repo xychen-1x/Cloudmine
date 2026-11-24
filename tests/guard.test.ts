@@ -102,7 +102,11 @@ function inspect(): string[] {
     if (analyzed.has(ext)) {
       const source = fs.readFileSync(file, "utf8");
       const sf = guardProgram.getSourceFile(file);
-      if (!sf || guardProgram.getSyntacticDiagnostics(sf).length > 0) {
+      if (!sf) {
+        errors.push(rel + ": missing from compiler program");
+        continue;
+      }
+      if (guardProgram.getSyntacticDiagnostics(sf).length > 0) {
         errors.push(rel + ": parse error");
       }
 
