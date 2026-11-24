@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { LocationSearch } from "@/components/LocationSearch";
 import { WeatherDashboard } from "@/components/WeatherDashboard";
 import { getPhilippineForecast } from "@/lib/weather/forecast";
@@ -34,10 +35,10 @@ function toPublicLocation(location: {
 function PageHeader() {
   return (
     <header className="weather-topbar">
-      <a className="brand brand-small" href="/" aria-label="Weathercast home">
+      <Link className="brand brand-small" href="/" aria-label="Weathercast home">
         <span className="brand-mark" aria-hidden="true">W</span>
         <span>weathercast</span>
-      </a>
+      </Link>
       <div className="page-search"><LocationSearch /></div>
     </header>
   );
