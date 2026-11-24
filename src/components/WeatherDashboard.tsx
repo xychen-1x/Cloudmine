@@ -61,7 +61,10 @@ function HourCard({ item }: { item: HourlyWeather }) {
       <p className="hour-time">{formatTime(item.time)}</p>
       <span className="hour-icon" aria-hidden="true">{weather.icon}</span>
       <p className="hour-temp">{formatTemperature(item.temperatureC)}</p>
-      <p className="hour-rain">☔ {precipitationLabel(item.precipitationProbabilityPercent)}</p>
+      <p className="hour-rain">☔ {precipitationLabel(item.precipitationProbabilityPercent)} chance</p>
+      <p className="hour-precipitation">
+        {item.precipitationMm === null ? "— mm" : `${item.precipitationMm.toFixed(1)} mm`}
+      </p>
     </article>
   );
 }
