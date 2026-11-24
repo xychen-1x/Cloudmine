@@ -1,9 +1,10 @@
-name: Phase 1 checks
+name: Weathercast checks
 
 on:
   push:
     branches:
       - phase-1/ai-provider-abstraction
+      - phase-2/weather-dashboard
   pull_request:
     branches:
       - main
@@ -20,7 +21,7 @@ jobs:
         with:
           node-version: 22
       - name: Install dependencies
-        run: npm install
+        run: npm ci
       - name: Lint
         run: npm run lint
       - name: Typecheck
