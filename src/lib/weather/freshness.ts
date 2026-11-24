@@ -15,9 +15,9 @@ export function getResponseAgeMinutes(
   return Math.max(0, Math.floor(age));
 }
 
-export type FreshnessState = "fresh" | "stale" | "expired" | "unknown";
+export type ResponseAgeState = "fresh" | "stale" | "expired" | "unknown";
 
-export function getFreshnessState(ageMinutes: number | null): FreshnessState {
+export function getResponseAgeState(ageMinutes: number | null): ResponseAgeState {
   if (ageMinutes === null) return "unknown";
   if (ageMinutes <= 60) return "fresh";
   if (ageMinutes <= 90) return "stale";
