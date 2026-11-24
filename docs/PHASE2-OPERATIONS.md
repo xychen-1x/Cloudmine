@@ -86,3 +86,16 @@ Before requesting Owner review:
 8. Record Open-Meteo equivalent-call weight, observed requests, Vercel Runtime Cache usage, region, and Preview/Production environment separately.
 
 If Vercel SSO protection prevents an automated Preview test, record that blocker and perform the exact test through an authorized browser/session. Never describe an unexecuted test as passed.
+
+
+## Dependency security audit (November 24, 2026)
+
+The committed lockfile was audited using `npm audit --json` in GitHub Actions after a clean `npm ci`.
+
+- Resolved toolchain: Next.js 16.4.6, Vitest 3.2.7, @vitest/mocker 3.2.7, tinypool 1.1.1, Vite 7.3.8, Node engine 22.x.
+- All dependencies: 3 reported advisories (1 moderate, 2 critical).
+- Production dependencies (`npm audit --omit=dev`): 0 reported advisories.
+- The findings are confined to the development/test dependency tree: Vitest / @vitest/mocker / tinypool. npm reports Vitest 5.1.1 as an available fix, and the proposed fix is a major-version upgrade.
+- No automatic `npm audit fix --force`, Vitest upgrade, or dependency-range change was applied. The existing Dependabot Vitest upgrade remains a separate Owner decision because the approved Phase 2 specification excludes unapproved dependency upgrades. Before accepting that fix, regenerate the lockfile, verify the exact resolved Node and Vite compatibility, and rerun the complete CI and Preview checks.
+
+This audit does not indicate a vulnerability in the production dependency tree, but the development/test toolchain findings remain a known risk and are not being described as fixed.
