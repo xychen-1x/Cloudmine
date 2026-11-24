@@ -1,5 +1,5 @@
 import "server-only";
-import type { AIErrorCode, ProviderFailure } from "../types";
+import type { ProviderFailure } from "../types";
 export function failure(code:ProviderFailure["code"],provider:"gemini"|"groq",extra:Partial<ProviderFailure>={}):ProviderFailure{
  const messages:Record<string,string>={signal_aborted:"Provider request was aborted.",rate_limited:"Provider rate limit reached.",provider_unavailable:"Provider unavailable.",auth:"Provider authentication failed.",bad_request:"Provider rejected request.",safety_blocked:"Provider safety block.",unknown:"Unexpected provider response."};
  return {code,retryable:code==="rate_limited"||code==="provider_unavailable",provider,message:messages[code]??"Provider request failed.",...extra};
