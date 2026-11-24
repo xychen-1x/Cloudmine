@@ -1,0 +1,55 @@
+name: Phase 2 lockfile bootstrap
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - package.json
+      - .github/workflows/phase2-lockfile-bootstrap.yml
+
+permissions:
+  contents: read
+
+jobs:
+  generate-lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out reviewed pull request commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Generate reproducible npm lockfile
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund --lockfile-version=3
+
+      - name: Validate package-lock metadata
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+          const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
+          if (lock.lockfileVersion !== 3) throw new Error("Expected npm lockfileVersion 3.");
+          if (lock.packages?.[""]?.name !== pkg.name) throw new Error("Lockfile root package name mismatch.");
+          if (JSON.stringify(lock.packages?.[""]?.dependencies ?? {}) !== JSON.stringify(pkg.dependencies ?? {})) {
+            throw new Error("Lockfile root dependencies do not match package.json.");
+          }
+          if (JSON.stringify(lock.packages?.[""]?.devDependencies ?? {}) !== JSON.stringify(pkg.devDependencies ?? {})) {
+            throw new Error("Lockfile root devDependencies do not match package.json.");
+          }
+          console.log("Lockfile metadata matches package.json.");
+          NODE
+
+      - name: Upload generated lockfile for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2-package-lock
+          path: package-lock.json
+          if-no-files-found: error
+          retention-days: 1
