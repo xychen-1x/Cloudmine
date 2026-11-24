@@ -4,7 +4,7 @@ import {
   parseLocationByIdResponse,
   parseLocationSearchResponse,
 } from "@/lib/weather/validation";
-import { getFreshnessState, getResponseAgeMinutes } from "@/lib/weather/freshness";
+import { getResponseAgeState, getResponseAgeMinutes } from "@/lib/weather/freshness";
 import { describeWeatherCode } from "@/lib/weather/weather-codes";
 
 function location(id: number, countryCode = "PH") {
@@ -122,11 +122,11 @@ describe("source freshness and weather codes", () => {
   });
 
   it("applies the approved 60/90-minute response-age thresholds", () => {
-    expect(getFreshnessState(60)).toBe("fresh");
-    expect(getFreshnessState(61)).toBe("stale");
-    expect(getFreshnessState(90)).toBe("stale");
-    expect(getFreshnessState(91)).toBe("expired");
-    expect(getFreshnessState(null)).toBe("unknown");
+    expect(getResponseAgeState(60)).toBe("fresh");
+    expect(getResponseAgeState(61)).toBe("stale");
+    expect(getResponseAgeState(90)).toBe("stale");
+    expect(getResponseAgeState(91)).toBe("expired");
+    expect(getResponseAgeState(null)).toBe("unknown");
   });
 
   it("does not label a missing, invalid, or far-future response timestamp as recent", () => {
