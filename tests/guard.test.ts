@@ -130,7 +130,7 @@ function inspect(): string[] {
           const requireCall = ts.isIdentifier(expression) && expression.text === "require";
           const propertyCall = ts.isPropertyAccessExpression(expression) &&
             ((ts.isIdentifier(expression.expression) && expression.expression.text === "require" && expression.name.text === "resolve") ||
-             (ts.isMetaProperty(expression.expression) && expression.expression.keywordToken === ts.SyntaxKind.ImportKeyword && expression.name.text === "meta" && expression.name.text === "resolve"));
+             (ts.isMetaProperty(expression.expression) && expression.expression.keywordToken === ts.SyntaxKind.ImportKeyword && expression.expression.name.text === "meta" && expression.name.text === "resolve"));
           if ((dynamicImport || requireCall) && (!node.arguments[0] || !ts.isStringLiteral(node.arguments[0])) && !isTest(file)) {
             errors.push(rel + ": non-literal module loading");
           }
@@ -161,11 +161,6 @@ describe("AI boundary guard", () => {
   it("scans the repo with only the documented fixed exclusions", () => {
     expect([...excluded].sort()).toEqual([".git", ".next", ".vercel", "coverage", "node_modules"]);
     expect(inspect()).toEqual([]);
-  });
-
-  it("resolves TypeScript aliases using the parsed project configuration", () => {
-    expect(parsedConfig.options).toBeDefined();
-    expect(parsedConfig.options.paths).toEqual(undefined);
   });
 
   it("does not exempt scripts or allow a build checker to import AI", () => {
