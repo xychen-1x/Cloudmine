@@ -113,6 +113,21 @@ describe("Open-Meteo request construction", () => {
     expect(FORECAST_EQUIVALENT_CALL_WEIGHT).toBe(1.2);
   });
 
+  it("rejects an invalid HTTP Date header as an unverifiable timestamp", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(openMeteoForecast()), {
+      status: 200,
+      headers: {
+        "content-type": "application/json",
+        date: "not-a-valid-http-date",
+      },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await getPhilippineForecast({ ...location, id: 1701672 });
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.value.sourceResponseTime).toBeNull();
+  });
+
   it("does not invent a response timestamp when the HTTP Date header is absent", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(openMeteoForecast()), {
       status: 200,
