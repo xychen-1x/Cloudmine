@@ -73,7 +73,6 @@ describe("Open-Meteo request construction", () => {
 
     const result = await searchPhilippineLocations(" Manila ");
     expect(result.ok).toBe(true);
-    expect(result.ok && result.value.sourceResponseTime).toBe("2026-11-24T12:00:00.000Z");
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     const [requestUrl, options] = fetchMock.mock.calls[0] as [URL, RequestInit & { next?: { revalidate?: number } }];
@@ -95,6 +94,7 @@ describe("Open-Meteo request construction", () => {
 
     const result = await getPhilippineForecast({ ...location, id: 1701669 });
     expect(result.ok).toBe(true);
+    expect(result.ok && result.value.sourceResponseTime).toBe("2026-11-24T12:00:00.000Z");
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     const [requestUrl, options] = fetchMock.mock.calls[0] as [URL, RequestInit & { next?: { revalidate?: number } }];
