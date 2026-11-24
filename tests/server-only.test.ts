@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import * as ai from "../src/lib/ai/index";
+import { generate } from "../src/lib/ai/index";
 import * as config from "../src/lib/ai/config";
 import * as errors from "../src/lib/ai/errors";
 import * as limits from "../src/lib/ai/limits";
@@ -14,6 +15,14 @@ import * as groq from "../src/lib/ai/providers/groq";
 import * as shared from "../src/lib/ai/providers/shared";
 
 describe("server-only AI module imports", () => {
+  it("rejects an empty question before provider configuration", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "");
+    vi.stubEnv("GROQ_API_KEY", "");
+    const result = await generate({ question: "   " });
+    expect(result).toMatchObject({ ok: false, error: { code: "invalid_argument" } });
+    vi.unstubAllEnvs();
+  });
+
   it("loads the complete AI library under Vitest's test-only server-only alias", () => {
     expect(ai.generate).toBeTypeOf("function");
     expect(config.readConfig).toBeTypeOf("function");
