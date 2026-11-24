@@ -92,6 +92,25 @@ if (sentinelMatches.length) {
   throw new Error("AI sentinel found in build output: " + sentinelMatches.join(", "));
 }
 
+// If provider secrets are configured in the build environment, ensure their literal
+// values never appear in either client assets or server bundles.
+for (const secretName of ["GEMINI_API_KEY", "GROQ_API_KEY", "TURNSTILE_SECRET_KEY"]) {
+  const secretValue = process.env[secretName];
+  if (!secretValue || secretValue.length < 8) continue;
+
+  for (const outputName of ["static", "server"]) {
+    const outputDirectory = path.join(scanRoot, outputName);
+    if (!fs.existsSync(outputDirectory)) continue;
+
+    visitFiles(outputDirectory, (file) => {
+      const data = fs.readFileSync(file);
+      if (data.includes(Buffer.from(secretValue, "utf8"))) {
+        throw new Error("Configured secret value found in build output: " + secretName);
+      }
+    });
+  }
+}
+
 for (const entry of forbidden) {
   const split = entry.indexOf("=");
   if (split < 1) throw new Error("Invalid --forbid-in argument.");
