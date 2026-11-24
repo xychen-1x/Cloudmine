@@ -3,7 +3,7 @@ import type {
   DailyWeather,
   HourlyWeather,
   ResolvedLocation,
-  WeatherForecast,
+  WeatherForecastData,
 } from "./types";
 
 type JsonObject = Record<string, unknown>;
@@ -209,7 +209,7 @@ function readCurrent(
 export function parseForecastResponse(
   payload: unknown,
   fallbackTimezone: string,
-): WeatherForecast | null {
+): WeatherForecastData | null {
   if (!isObject(payload) || !isObject(payload.hourly) || !isObject(payload.daily)) {
     return null;
   }
