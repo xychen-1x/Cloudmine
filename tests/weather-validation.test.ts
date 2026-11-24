@@ -103,6 +103,15 @@ describe("Open-Meteo payload validation", () => {
     const reversedRange = forecastPayload();
     reversedRange.daily.temperature_2m_min[0] = 35;
     expect(parseForecastResponse(reversedRange, "Asia/Manila")).toBeNull();
+
+    const invalidCalendarDate = forecastPayload();
+    invalidCalendarDate.daily.time[0] = "2026-02-31";
+    expect(parseForecastResponse(invalidCalendarDate, "Asia/Manila")).toBeNull();
+
+    const unorderedHours = forecastPayload();
+    [unorderedHours.hourly.time[0], unorderedHours.hourly.time[1]] =
+      [unorderedHours.hourly.time[1], unorderedHours.hourly.time[0]];
+    expect(parseForecastResponse(unorderedHours, "Asia/Manila")).toBeNull();
   });
 });
 
