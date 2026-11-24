@@ -163,7 +163,11 @@ describe("AI boundary guard", () => {
     expect(inspect()).toEqual([]);
   });
 
-  it("keeps unsupported source formats such as MDX classified as unknown", () => {\n    expect(inert.has(".mdx")).toBe(false);\n  });\n\n  it("does not exempt scripts or allow a build checker to import AI", () => {
+  it("keeps unsupported source formats such as MDX classified as unknown", () => {
+    expect(inert.has(".mdx")).toBe(false);
+  });
+
+  it("does not exempt scripts or allow a build checker to import AI", () => {
     const checker = path.join(root, "scripts/check-build.mjs");
     expect(fs.existsSync(checker)).toBe(true);
     expect(fs.readFileSync(checker, "utf8")).not.toMatch(/lib[\\/]ai/);
