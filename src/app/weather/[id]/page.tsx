@@ -49,7 +49,7 @@ export default async function WeatherPage({
   params: Promise<{ id: string }>;
 }) {
   const { id: rawId } = await params;
-  if (!/^[1-9]\\d{0,9}$/.test(rawId)) notFound();
+  if (!/^[1-9]\d{0,9}$/.test(rawId)) notFound();
 
   const id = Number(rawId);
   if (!Number.isSafeInteger(id)) notFound();
