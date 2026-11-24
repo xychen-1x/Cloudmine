@@ -20,6 +20,16 @@ const parsedConfig = ts.getParsedCommandLineOfConfigFile(configPath, {}, {
 });
 if (!parsedConfig) throw new Error("Unable to parse the root TypeScript configuration.");
 const compilerOptions: ts.CompilerOptions = parsedConfig.options;
+const scannedFiles = walkForProgram(root);
+const guardProgram = ts.createProgram(scannedFiles.filter((file) => analyzed.has(path.extname(file))), compilerOptions);
+function walkForProgram(dir: string, out: string[] = []): string[] {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const file = path.join(dir, entry.name);
+    if (entry.isDirectory()) { if (!excluded.has(entry.name)) walkForProgram(file, out); }
+    else if (analyzed.has(path.extname(file))) out.push(file);
+  }
+  return out;
+}
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -93,13 +103,8 @@ function inspect(): string[] {
       const source = fs.readFileSync(file, "utf8");
       const kind = ext.includes("x") ? ts.ScriptKind.TSX :
         [".js", ".jsx", ".mjs", ".cjs"].includes(ext) ? ts.ScriptKind.JS : ts.ScriptKind.TS;
-      const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, kind);
-      const syntaxDiagnostics = ts.transpileModule(source, {
-        fileName: file,
-        reportDiagnostics: true,
-        compilerOptions: { allowJs: true, target: ts.ScriptTarget.Latest },
-      }).diagnostics ?? [];
-      if (syntaxDiagnostics.some((diagnostic) => diagnostic.category === ts.DiagnosticCategory.Error)) {
+      const sf = guardProgram.getSourceFile(file);
+      if (!sf || guardProgram.getSyntacticDiagnostics(sf).length > 0) {
         errors.push(rel + ": parse error");
       }
 
