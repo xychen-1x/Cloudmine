@@ -101,8 +101,6 @@ function inspect(): string[] {
 
     if (analyzed.has(ext)) {
       const source = fs.readFileSync(file, "utf8");
-      const kind = ext.includes("x") ? ts.ScriptKind.TSX :
-        [".js", ".jsx", ".mjs", ".cjs"].includes(ext) ? ts.ScriptKind.JS : ts.ScriptKind.TS;
       const sf = guardProgram.getSourceFile(file);
       if (!sf || guardProgram.getSyntacticDiagnostics(sf).length > 0) {
         errors.push(rel + ": parse error");
