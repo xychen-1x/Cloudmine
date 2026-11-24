@@ -16,7 +16,7 @@ function wellFormed(value:unknown):value is Result<ProviderSuccess,ProviderFailu
 function providerTimeout(p:AIProvider):AIError{return publicError("timeout",p.name,"provider");}
 function unexpected(p:AIProvider):AIError{return {code:"unknown",retryable:false,provider:p.name,message:"Unexpected provider failure."};}
 function eligible(e:AIError):boolean{return e.code==="rate_limited"||e.code==="provider_unavailable"||(e.code==="timeout"&&e.timeoutScope==="provider");}
-export async function runProviderChain(input:AIRequest,chain:AIProvider[],caller?:AbortSignal,limits:Limits=LIMITS,clock:()=>number=()=>performance.now()):Promise<Result<ProviderSuccess,AIError>>{
+export async function runProviderChain(input:AIRequest,chain:AIProvider[],caller?:AbortSignal,limits:Limits=LIMITS,clock:()=>number=()=>performance.now()):Promise<Result<ProviderSuccess & {provider:"gemini"|"groq"},AIError>>{
  const bad=validateLimits(limits);if(bad.length)return invalidLimits(bad);
  const overall=AbortSignal.timeout(limits.totalBudgetMs);const t0=clock();let last:AIError|undefined;
  for(const [i,p] of chain.entries()){
@@ -39,7 +39,7 @@ export async function runProviderChain(input:AIRequest,chain:AIProvider[],caller
   if(overall.aborted)return {ok:false,error:publicError("timeout",undefined,"overall")};
   const timedOut=providerTimer.aborted;
   if(result===THREW)last=timedOut?providerTimeout(p):unexpected(p);
-  else if(result.ok){if(!timedOut){logAIEvent({provider:p.name,outcome:"success",model:result.value.model,latencyMs:clock()-started});return result;}last=providerTimeout(p);}
+  else if(result.ok){if(!timedOut){logAIEvent({provider:p.name,outcome:"success",model:result.value.model,latencyMs:clock()-started});return {ok:true,value:{...result.value,provider:p.name}};}last=providerTimeout(p);}
   else if(result.error.code==="signal_aborted")last=timedOut?providerTimeout(p):{code:"unknown",retryable:false,provider:p.name,message:"Provider aborted without a signal."};
   else last=toPublicError(result.error);
   logAIEvent({provider:p.name,outcome:"failed",errorCode:last.code,latencyMs:clock()-started});
