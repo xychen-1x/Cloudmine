@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getFreshnessState, getResponseAgeMinutes } from "@/lib/weather/freshness";
+import { getResponseAgeState, getResponseAgeMinutes } from "@/lib/weather/freshness";
 import { describeWeatherCode } from "@/lib/weather/weather-codes";
 import type {
   DailyWeather,
@@ -47,7 +47,7 @@ function precipitationLabel(value: number | null): string {
   return value === null ? "—" : `${Math.round(value)}%`;
 }
 
-function freshnessCopy(state: ReturnType<typeof getFreshnessState>, age: number | null): string {
+function responseAgeCopy(state: ReturnType<typeof getResponseAgeState>, age: number | null): string {
   if (state === "fresh") return age === null ? "Response time unavailable" : `Open-Meteo response received ${age} min ago`;
   if (state === "stale") return age === null ? "Response time unavailable" : `Open-Meteo response is aging · ${age} min old`;
   if (state === "expired") return "Open-Meteo response is older than 90 minutes";
@@ -105,8 +105,8 @@ export function WeatherDashboard({
     return () => window.clearInterval(timer);
   }, [forecast]);
 
-  const freshness = getFreshnessState(ageMinutes);
-  const currentCanBePresented = freshness === "fresh" || freshness === "stale";
+  const responseAgeState = getResponseAgeState(ageMinutes);
+  const currentCanBePresented = responseAgeState === "fresh" || responseAgeState === "stale";
   const forecastCanBePresented = ageMinutes !== null && ageMinutes <= 360;
   const currentDescription = forecast
     ? describeWeatherCode(forecast.current.weatherCode)
@@ -140,9 +140,9 @@ export function WeatherDashboard({
         </section>
       ) : (
         <>
-          <section className={`freshness-banner freshness-${freshness}`} aria-live="polite">
+          <section className={`freshness-banner freshness-${responseAgeState}`} aria-live="polite">
             <span className="freshness-dot" aria-hidden="true" />
-            <span>{freshnessCopy(freshness, ageMinutes)}</span>
+            <span>{responseAgeCopy(responseAgeState, ageMinutes)}</span>
             <span className="freshness-time">Valid time: {formatTime(forecast.current.time)}</span>
           </section>
 
