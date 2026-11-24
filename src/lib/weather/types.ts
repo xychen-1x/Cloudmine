@@ -54,9 +54,14 @@ export type DailyWeather = {
   precipitationProbabilityPercent: number | null;
 };
 
-export type WeatherForecast = {
+export type WeatherForecastData = {
   timezone: string;
   current: CurrentWeather;
   hourly: HourlyWeather[];
   daily: DailyWeather[];
+};
+
+export type WeatherForecast = WeatherForecastData & {
+  // Origination time of the Open-Meteo HTTP response, not the model run time.
+  sourceResponseTime: string | null;
 };
