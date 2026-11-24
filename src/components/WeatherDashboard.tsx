@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { getFreshnessState, getSourceAgeMinutes } from "@/lib/weather/freshness";
 import { describeWeatherCode } from "@/lib/weather/weather-codes";
 import type {
@@ -111,10 +112,10 @@ export function WeatherDashboard({
   return (
     <main className="weather-page">
       <div className="weather-page-top">
-        <a className="brand brand-small" href="/" aria-label="Weathercast home">
+        <Link className="brand brand-small" href="/" aria-label="Weathercast home">
           <span className="brand-mark" aria-hidden="true">W</span>
           <span>weathercast</span>
-        </a>
+        </Link>
         <span className="region-pill">PHILIPPINES</span>
       </div>
 
