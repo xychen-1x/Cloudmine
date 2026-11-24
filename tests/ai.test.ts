@@ -3,9 +3,10 @@ import {validateLimits,LIMITS} from "../src/lib/ai/limits";
 import {runProviderChain} from "../src/lib/ai/orchestrator";
 import {redactCoordinates,sanitizeUserText} from "../src/lib/ai/sanitize";
 import {buildAIRequest} from "../src/lib/ai/prompts";
+import {GEMINI_MODEL,GROQ_MODEL} from "../src/lib/ai/models";
 import type {AIProvider,AIRequest} from "../src/lib/ai/types";
 const req:AIRequest={systemPrompt:"system",userPrompt:"question"};
-const success=(name:"gemini"|"groq",text="Clear skies.")=>({ok:true as const,value:{text,model:name==="gemini"?"gemini-3.1-flash-lite":"openai/gpt-oss-20b",finishReason:"stop" as const}});
+const success=(name:"gemini"|"groq",text="Clear skies.")=>({ok:true as const,value:{text,model:name==="gemini"?GEMINI_MODEL:GROQ_MODEL,finishReason:"stop" as const}});
 const provider=(name:"gemini"|"groq",generate:AIProvider["generate"]):AIProvider=>({name,generate});
 describe("limits",()=>{
  it("accepts defaults and a valid lower-bound fixture",()=>{expect(validateLimits(LIMITS)).toEqual([]);expect(validateLimits({totalBudgetMs:2,primaryTimeoutMs:1,fallbackTimeoutMs:1,minFallbackMs:1,minAttemptMs:1})).toEqual([]);});

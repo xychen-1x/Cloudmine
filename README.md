@@ -36,7 +36,7 @@ Weathercast does not claim AI explanations are official forecasts or alerts. Fut
 
 ## Model selection
 
-The implementation uses Gemini model `gemini-2.5-flash-lite` and Groq model `openai/gpt-oss-20b`, checked against provider documentation on 2026-11-24. Free-tier availability, quotas, geographic availability, and no-card requirements can change and are not guaranteed. No live provider call has been performed as part of this phase.
+The implementation uses Gemini model `gemini-3.5-flash-lite` and Groq model `openai/gpt-oss-20b`, checked against provider documentation on 2026-11-24. Google's current pricing page lists Gemini 3.5 Flash-Lite with Standard free-tier input/output pricing. Google states free-tier requests may be used to improve its products. Actual access, quotas, geographic availability, capacity, and account requirements can change and are not guaranteed. No live provider call has been performed as part of this phase.
 
 ## Attribution
 
