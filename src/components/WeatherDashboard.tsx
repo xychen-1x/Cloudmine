@@ -143,7 +143,7 @@ export function WeatherDashboard({
           <section className={`freshness-banner freshness-${freshness}`} aria-live="polite">
             <span className="freshness-dot" aria-hidden="true" />
             <span>{freshnessCopy(freshness, ageMinutes)}</span>
-            <span className="freshness-time">Model time: {formatTime(forecast.current.time)}</span>
+            <span className="freshness-time">Data timestamp: {formatTime(forecast.current.time)}</span>
           </section>
 
           {!currentCanBePresented ? (
@@ -181,7 +181,7 @@ export function WeatherDashboard({
                 </div>
                 <div className="detail-tile">
                   <span className="detail-symbol" aria-hidden="true">🕒</span>
-                  <span className="detail-label">Model time</span>
+                  <span className="detail-label">Data timestamp</span>
                   <strong>{formatTime(forecast.current.time)}</strong>
                 </div>
               </div>
