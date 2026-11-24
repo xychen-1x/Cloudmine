@@ -72,5 +72,9 @@ jobs:
         run: npm test
       - name: Production build without AI keys
         run: npm run build
-      - name: Verify build boundary
+      - name: Verify build boundary and synthetic server-secret absence
+        env:
+          GEMINI_API_KEY: WC_TEST_GEMINI_SECRET_SENTINEL_2026_11_24
+          GROQ_API_KEY: WC_TEST_GROQ_SECRET_SENTINEL_2026_11_24
+          TURNSTILE_SECRET_KEY: WC_TEST_TURNSTILE_SECRET_SENTINEL_2026_11_24
         run: npm run check:build
