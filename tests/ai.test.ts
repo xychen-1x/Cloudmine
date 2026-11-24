@@ -1,7 +1,7 @@
 import {afterEach,beforeEach,describe,expect,it,vi} from "vitest";
 import {validateLimits,LIMITS} from "../src/lib/ai/limits";
 import {runProviderChain} from "../src/lib/ai/orchestrator";
-import {redactCoordinates,sanitizeUserText} from "../src/lib/ai/sanitize";
+import {redactCoordinates,sanitizeUserText} from "../src/lib/ai/sanitize";\nimport {buildAIRequest} from "../src/lib/ai/prompts";
 import type {AIProvider,AIRequest} from "../src/lib/ai/types";
 const req:AIRequest={systemPrompt:"system",userPrompt:"question"};
 const success=(name:"gemini"|"groq",text="Clear skies.")=>({ok:true as const,value:{text,model:name==="gemini"?"gemini-3.1-flash-lite":"openai/gpt-oss-20b",finishReason:"stop" as const}});
@@ -19,6 +19,18 @@ describe("provider orchestration",()=>{
 describe("privacy helpers",()=>{
  it("redacts decimal coordinate pairs and geo URIs",()=>{expect(redactCoordinates("Here 14.5995, 120.9842 and geo:14.5,120.9")).not.toContain("14.5995");});
  it("trims and caps user text",()=>{expect(sanitizeUserText("  hello  ")).toBe("hello");expect(sanitizeUserText("x".repeat(1200))).toHaveLength(1000);});
+ it("allowlists nested weather values at runtime and drops injected coordinate fields",()=>{
+  const hostile={kind:"weather-data",source:"open-meteo",fetchedAt:"2026-11-24T00:00:00Z",locationLabel:"Manila",
+   current:{temperatureC:30,latitude:14.5,longitude:120.9,secret:"must-not-leak"},
+   hourly:[{time:"2026-11-24T01:00:00Z",temperatureC:29,lat:14.5,lng:120.9}],
+  } as unknown as import("../src/lib/ai/types").WeatherDataPayload;
+  const prompt=buildAIRequest({question:"Weather?",weather:hostile}).userPrompt;
+  expect(prompt).toContain('"temperatureC":30');
+  expect(prompt).not.toContain("latitude");
+  expect(prompt).not.toContain("longitude");
+  expect(prompt).not.toContain("must-not-leak");
+  expect(prompt).not.toContain('"lat"');
+ });
 });
 beforeEach(()=>{vi.stubEnv("GEMINI_API_KEY","");vi.stubEnv("GROQ_API_KEY","");vi.stubEnv("AI_PROVIDER","gemini");});
 afterEach(()=>{vi.unstubAllEnvs();vi.restoreAllMocks();});
