@@ -10,7 +10,7 @@ const analyzed = new Set([".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", 
 const inert = new Set([
   ".json", ".css", ".scss", ".md", ".txt", ".svg", ".png", ".jpg",
   ".jpeg", ".gif", ".webp", ".ico", ".woff", ".woff2", ".ttf", ".lock",
-  ".yml", ".yaml",
+  ".yml", ".yaml", ".tsbuildinfo",
 ]);
 const builtins = new Set(builtinModules.flatMap((name) => [name, name.replace(/^node:/, "")]));
 const configPath = path.join(root, "tsconfig.json");
@@ -48,6 +48,16 @@ function isTest(file: string): boolean {
   const rel = path.relative(root, file).replaceAll(path.sep, "/");
   const inRoute = /(^|\/)(app|pages)(\/|$)/.test(rel);
   return !inRoute && (/\.(test|spec)\.(ts|tsx|js|jsx|mjs|cjs)$/.test(rel) || /(^|\/)(__tests__|tests)\//.test(rel));
+}
+
+function hasUseServerDirective(container: ts.SourceFile | ts.Block): boolean {
+  // A Server Action directive must be in the directive prologue of a module
+  // or function body; an arbitrary string literal is not a directive.
+  for (const statement of container.statements) {
+    if (!ts.isExpressionStatement(statement) || !ts.isStringLiteral(statement.expression)) break;
+    if (statement.expression.text === "use server") return true;
+  }
+  return false;
 }
 
 function isAI(file: string): boolean {
@@ -151,7 +161,9 @@ function inspect(): string[] {
         if (ts.isNewExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "Function" && !isTest(file)) {
           errors.push(rel + ": dynamic code execution");
         }
-        if (ts.isStringLiteral(node) && node.text === "use server") errors.push(rel + ": Server Action directive");
+        if ((ts.isSourceFile(node) || ts.isBlock(node)) && hasUseServerDirective(node)) {
+          errors.push(rel + ": Server Action directive");
+        }
         ts.forEachChild(node, visit);
       };
       visit(sf);
@@ -171,8 +183,22 @@ describe("AI boundary guard", () => {
     expect(inspect()).toEqual([]);
   });
 
+  it("detects only actual Server Action directive prologues", () => {
+    const source = (code: string) =>
+      ts.createSourceFile("fixture.ts", code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+    const moduleDirective = source('"use server"; export async function action() {}');
+    const ordinaryString = source('const label = "use server";');
+    const functionDirective = source('async function action() { "use server"; }');
+    const fn = functionDirective.statements[0];
+
+    expect(hasUseServerDirective(moduleDirective)).toBe(true);
+    expect(hasUseServerDirective(ordinaryString)).toBe(false);
+    expect(fn && ts.isFunctionDeclaration(fn) && fn.body ? hasUseServerDirective(fn.body) : false).toBe(true);
+  });
+
   it("keeps unsupported source formats such as MDX classified as unknown", () => {
     expect(inert.has(".mdx")).toBe(false);
+    expect(inert.has(".tsbuildinfo")).toBe(true);
   });
 
   it("does not exempt scripts or allow a build checker to import AI", () => {
