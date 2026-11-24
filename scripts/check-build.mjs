@@ -119,8 +119,16 @@ function readBuildManifest(file) {
 
 const appManifest = readBuildManifest(path.join(scanRoot, "server/app-paths-manifest.json"));
 const apiRoutePattern = new RegExp("(^|/)api(/|$)", "i");
-if (appManifest && Object.keys(appManifest).some((route) => apiRoutePattern.test(route))) {
-  throw new Error("API route found in build manifest.");
+const allowedApiRoutes = new Set(["/api/locations/route"]);
+if (appManifest) {
+  const apiRoutes = Object.keys(appManifest).filter((route) => apiRoutePattern.test(route));
+  const blockedApiRoutes = apiRoutes.filter((route) => !allowedApiRoutes.has(route));
+  if (blockedApiRoutes.length) {
+    throw new Error("Unreviewed API route found in build manifest: " + blockedApiRoutes.join(", "));
+  }
+  if (!apiRoutes.includes("/api/locations/route")) {
+    throw new Error("The reviewed /api/locations route is missing from the build manifest.");
+  }
 }
 
 const actionManifest = readBuildManifest(path.join(scanRoot, "server/server-reference-manifest.json"));
