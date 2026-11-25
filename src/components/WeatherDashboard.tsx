@@ -114,14 +114,9 @@ export function WeatherDashboard({
 
   return (
     <main className="weather-page">
-      <div className="weather-page-top">
-        <Link className="brand brand-small" href="/" aria-label="Weathercast home">
-          <span className="brand-mark" aria-hidden="true">W</span>
-          <span>weathercast</span>
-        </Link>
-        <span className="region-pill">PHILIPPINES</span>
+      <div className="weather-page-top" style={{ justifyContent: "flex-end" }}>
+        <Link href="/" className="region-pill">PHILIPPINES</Link>
       </div>
-
       <section className="location-heading">
         <p className="eyebrow">LOCAL WEATHER</p>
         <h1>{location.name}</h1>

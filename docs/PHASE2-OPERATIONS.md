@@ -47,6 +47,12 @@ Official references:
 - https://vercel.com/docs/incremental-static-regeneration/request-collapsing
 - https://vercel.com/docs/incremental-static-regeneration
 
+## TypeScript path aliases
+
+The `baseUrl` compiler option in `tsconfig.json` defines the base directory for resolving non-relative module imports. With `baseUrl: "."`, the `@/*` path mapping resolves imports such as `@/components/WeatherDashboard` to files under `src/*`.
+
+The option is valid and supported, including with the project's TypeScript and Next.js configuration. It is not required to remove it for the current build. If `baseUrl` is removed later, the `paths` entries may remain because TypeScript resolves them relative to `tsconfig.json`, but path-alias configuration should be changed and verified as one unit.
+
 ## API response age and weather valid time
 
 The implementation keeps two different timestamps separate:
@@ -95,20 +101,33 @@ Before requesting Owner review:
 If Vercel SSO protection prevents an automated Preview test, record that blocker and perform the exact test through an authorized browser/session. Never describe an unexecuted test as passed.
 
 
-## Dependency security audit (November 24, 2026)
+## Dependency security audit and toolchain resolution (updated November 25, 2026)
 
-The committed lockfile was audited using `npm audit --json` in GitHub Actions after a clean `npm ci`.
+The original committed lockfile was audited using `npm audit --json` in GitHub Actions and reported three advisories in the development/test dependency tree. No production dependency advisories were reported.
 
-- Resolved toolchain: Next.js 16.4.6, Vitest 3.2.7, @vitest/mocker 3.2.7, tinypool 1.1.1, Vite 7.3.8, Node engine 22.x.
-- All dependencies: 3 reported advisories (1 moderate, 2 critical).
-- Production dependencies (`npm audit --omit=dev`): 0 reported advisories.
-- The findings are confined to the development/test dependency tree: Vitest / @vitest/mocker / tinypool. npm reports Vitest 5.1.1 as an available fix, and the proposed fix is a major-version upgrade.
-- No automatic `npm audit fix --force`, Vitest upgrade, or dependency-range change was applied. The existing Dependabot Vitest upgrade remains a separate Owner decision because the approved Phase 2 specification excludes unapproved dependency upgrades. Before accepting that fix, regenerate the lockfile, verify the exact resolved Node and Vite compatibility, and rerun the complete CI and Preview checks.
+Following Owner approval, Vitest was upgraded from `3.2.7` to `4.1.12`, and `package-lock.json` was regenerated using npm rather than manually edited.
 
-This audit does not indicate a vulnerability in the production dependency tree, but the development/test toolchain findings remain a known risk and are not being described as fixed.
+The regenerated lockfile was inspected with Node.js `v22.23.5`. The resolved versions recorded in that inspection are:
 
+| Package | Resolved version | Dependency role |
+|---|---:|---|
+| Next.js | `16.4.6` | Production |
+| React | `19.3.1` | Production |
+| React DOM | `19.3.1` | Production |
+| TypeScript | `5.9.3` | Development/build tooling |
+| Vitest | `4.1.12` | Development/test tooling |
+| Vite | `8.3.8` | Development/test tooling; transitive through Vitest and `@vitest/mocker` |
 
-The 2026-11-24 audit found three advisories in the development/test dependency tree only: `vitest@3.2.7`, `@vitest/mocker@3.2.7`, and `tinypool@1.1.1`. No advisories were reported by `npm audit --omit=dev`. npm indicates the available remediation is a major upgrade to Vitest 5.1.1. No dependency upgrade has been applied; this remains an Owner decision, as documented above.
+The regenerated development/test toolchain also resolves Rolldown `1.2.19` and LightningCSS `1.33.0`, along with `@oxc-project/types`, `es-module-lexer`, `obug`, and platform-specific optional packages. Dependency-chain inspection attributed these additions to the Vite/Vitest toolchain. The review found **zero changed package records that could not be shown to belong to the development/test dependency tree**. The Vite change from `7.3.8` to `8.3.8` is therefore recorded as a development/test-toolchain resolution change, not as a production dependency update. The reviewed production versions listed above remain unchanged.
 
+Compatibility and verification notes:
+
+- The package's Node.js engine requirement is `22.x`.
+- Node.js `v22.23.5` was used for the read-only lockfile inspection. An earlier shell check reported Node.js `v24.22.2` and npm `11.19.1`; the available records do not establish the exact Node.js runtime used for every local install, test, and build command.
+- The Owner reported that clean `npm ci`, `npm audit`, ESLint, TypeScript typecheck, Vitest tests, production build, and `git diff --check` passed against the local working changes.
+- The regenerated lockfile's `npm audit --json` result was **0 vulnerabilities** (0 info, low, moderate, high, or critical) across 466 dependencies, including production and development dependencies.
+- These are local results reported by the Owner, not an independently reproduced run. CI on the final pushed branch head remains required, including Linux platform-specific optional-package installation and the full test/build checks. The protected Vercel Preview verification also remains a separate required gate; do not describe either pending check as passed.
+
+The previous audit findings are not considered resolved solely on the basis of the Vitest upgrade or successful build checks; the zero-vulnerability audit result for the regenerated lockfile is the verification. `npm audit fix --force` was not used. The existing Dependabot upgrade was not manually altered as part of this change and may need review against the final lockfile/PR state.
 
 The CI production build runs with synthetic, non-production sentinel values assigned to `GEMINI_API_KEY`, `GROQ_API_KEY`, and `TURNSTILE_SECRET_KEY`. The build's postbuild boundary scan therefore checks whether those literal values entered the actual `.next/static` or `.next/server` output. CI then runs the boundary checker once more with the same synthetic values. This does not expose real provider credentials or require AI keys for the weather dashboard.
