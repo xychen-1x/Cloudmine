@@ -86,20 +86,64 @@ The forecast service applies an in-process cooldown after Open-Meteo HTTP 429:
 
 This is best-effort protection per warm process, not a distributed/global lock or rate limiter. The Next.js/Vercel ISR path and Data Cache are the primary cache mechanisms; a local Promise map is not treated as cross-instance protection.
 
-## Required Preview verification
+## Preview verification status (updated November 25, 2026)
 
-Before requesting Owner review:
-1. Confirm the branch build passes `npm ci`, lint, typecheck, Vitest, production build, and build-output boundary checks.
-2. Confirm the build manifest contains exactly the reviewed `/api/locations/route` API route and no other API routes.
-3. Confirm no Server Action references are emitted.
-4. Test Philippine queries, empty results, invalid characters, overlong input, upstream 429, timeout, and malformed upstream JSON.
-5. Test a valid Philippine GeoNames ID, invalid ID, and a non-Philippine ID.
-6. Test current/hourly/daily rendering and all freshness boundaries.
-7. Run the 100-view same-city / ten-minute Preview test in the configured region. Record response cache headers and count `forecast_data_loaded`, `forecast_upstream_error`, and `forecast_rate_limited` runtime events carefully; `forecast_data_loaded` is an application event and must not automatically be interpreted as a counted upstream call if the Data Cache served the response.
-8. Record Open-Meteo equivalent-call weight, observed requests, Vercel Runtime Cache usage, region, and Preview/Production environment separately.
+### CI and build-boundary checks
 
-If Vercel SSO protection prevents an automated Preview test, record that blocker and perform the exact test through an authorized browser/session. Never describe an unexecuted test as passed.
+For head commit `446d1aa27dad758d3a2bc3adc9f8af94eab9c8d6` on `phase-2/weather-dashboard`, both the GitHub Actions push run (`45606894074`) and pull-request run (`45606903042`) completed successfully.
 
+The final CI run used Node.js `v22.23.5` and verified:
+1. `npm ci` completed.
+2. Full `npm audit` reported **0 vulnerabilities** across production and development dependencies.
+3. ESLint passed.
+4. TypeScript typecheck passed.
+5. Vitest passed: **49 tests across 8 files**.
+6. The production build with synthetic, non-production secret fixtures passed.
+7. The post-build boundary scan passed. It checks the build manifest for the reviewed `/api/locations/route` route and rejects unreviewed API routes, checks that no Server Action references are emitted, rejects AI sentinel values in build output, rejects configured secret values in server/client output, and scans in-root build symlinks safely.
+
+The generated Next.js `next-env.d.ts` file is ignored rather than committed. This avoids a clean-checkout CI failure caused by generated `.next/types` references that do not exist before a build.
+
+### Functional tests and Owner smoke test
+
+Automated tests cover Philippine-only geocoding and ID validation, malformed/invalid location data, empty search results, unsafe and overlong search input, upstream errors, 429 handling, timeout handling, forecast request construction, data validation, response-age thresholds, and WMO weather-code mapping.
+
+The Owner manually confirmed that the Preview weather flow works, including Philippine city selection and the current/forecast display. This was a smoke test, not exhaustive browser, accessibility, uptime, or load testing.
+
+### Same-city Preview cache/load test
+
+Date: November 25, 2026  
+Preview deployment: `dpl_EpbsheEgesepV8uePSvJyegoXe21`  
+URL: https://cloudmine-8wkc1oup9-xychen.vercel.app  
+Deployment commit: `446d1aa27dad758d3a2bc3adc9f8af94eab9c8d6`  
+Region: `iad1`  
+Route: `/weather/1717512` (Cebu City)
+
+The cold route request returned HTTP 200, rendered Cebu City, and was marked `x-vercel-cache: MISS`. The corresponding Preview runtime query recorded one `forecast_data_loaded` event for location ID `1717512` (117 ms).
+
+Two 100-attempt request batches were then sent to the same city URL within the 10-minute forecast revalidation window:
+- First burst (10 concurrent workers): 72 requests returned HTTP 200 with `x-vercel-cache: HIT`; 28 were rejected with HTTP 403.
+- Lower-rate retry (approximately one request per second): 32 requests returned HTTP 200 with `x-vercel-cache: HIT`; 68 were rejected with HTTP 403.
+
+Therefore, **104 successful same-route HTTP 200 responses were observed, and all 104 were cache hits**. These are successful HTTP requests, not 104 unique people or sessions. The initial cold MISS is additional to those 104 cache hits.
+
+The 403 responses were rejected by the Vercel Deployment Protection/access layer and did not appear as application route executions in the runtime logs. They are not counted as successful views and are not evidence of an application/weather API failure. Deployment Protection was not disabled or reconfigured.
+
+**What this proves:** In the tested `iad1` Preview region, the same city ISR page can serve at least 100 successful repeat requests as Vercel cache hits within the 10-minute window, without repeated page generation being observed in application runtime logs.
+
+**What this does not prove:** The application log `forecast_data_loaded` is not an upstream Open-Meteo billing counter; it may run when Next.js Data Cache supplies a cached fetch result. The exact number of upstream Open-Meteo HTTP requests was not independently measured. This test also does not establish cross-instance, cross-region, or global cache behavior. Do not describe the result as proof of exactly one upstream API request.
+
+The temporary Vercel Sandbox used for this test was stopped and deleted. A temporary Vercel share link was used to authenticate access to the protected Preview; it expires automatically. No project setting or deployment protection policy was changed.
+
+### Current Preview deployment reference
+
+- Deployment ID: `dpl_EpbsheEgesepV8uePSvJyegoXe21`
+- URL: https://cloudmine-8wkc1oup9-xychen.vercel.app
+- State: **READY**
+- Environment: Preview (not Production)
+- Branch/commit: `phase-2/weather-dashboard` / `446d1aa27dad758d3a2bc3adc9f8af94eab9c8d6`
+- Region: `iad1`
+
+This is the preserved reference deployment for final Phase 2 review. Do not trigger another deployment solely to repeat already-passed checks. Any final documentation commit may cause the Git-connected Preview workflow to create a new Preview; verify its status before replacing this reference.
 
 ## Dependency security audit and toolchain resolution (updated November 25, 2026)
 
@@ -123,11 +167,11 @@ The regenerated development/test toolchain also resolves Rolldown `1.2.19` and L
 Compatibility and verification notes:
 
 - The package's Node.js engine requirement is `22.x`.
-- Node.js `v22.23.5` was used for the read-only lockfile inspection. An earlier shell check reported Node.js `v24.22.2` and npm `11.19.1`; the available records do not establish the exact Node.js runtime used for every local install, test, and build command.
-- The Owner reported that clean `npm ci`, `npm audit`, ESLint, TypeScript typecheck, Vitest tests, production build, and `git diff --check` passed against the local working changes.
-- The regenerated lockfile's `npm audit --json` result was **0 vulnerabilities** (0 info, low, moderate, high, or critical) across 466 dependencies, including production and development dependencies.
-- These are local results reported by the Owner, not an independently reproduced run. CI on the final pushed branch head remains required, including Linux platform-specific optional-package installation and the full test/build checks. The protected Vercel Preview verification also remains a separate required gate; do not describe either pending check as passed.
+- Node.js `v22.23.5` was used for the read-only lockfile inspection and for the final GitHub Actions CI run.
+- The final GitHub Actions runs independently verified clean `npm ci`, full `npm audit`, ESLint, TypeScript typecheck, Vitest, production build, and build-output boundary checks on the pushed branch head.
+- The regenerated lockfile's CI `npm audit --json` result was **0 vulnerabilities** (0 info, low, moderate, high, or critical) across production and development dependencies.
+- Local results previously reported by the Owner remain useful context, but the final pushed-branch CI results above are the reproducible verification record.
 
-The previous audit findings are not considered resolved solely on the basis of the Vitest upgrade or successful build checks; the zero-vulnerability audit result for the regenerated lockfile is the verification. `npm audit fix --force` was not used. The existing Dependabot upgrade was not manually altered as part of this change and may need review against the final lockfile/PR state.
+The previous audit findings are considered resolved by the zero-vulnerability audit result for the regenerated lockfile, not merely by the Vitest upgrade or successful build checks. `npm audit fix --force` was not used. The existing Dependabot upgrade should still be reviewed against the final lockfile/PR state before merge.
 
 The CI production build runs with synthetic, non-production sentinel values assigned to `GEMINI_API_KEY`, `GROQ_API_KEY`, and `TURNSTILE_SECRET_KEY`. The build's postbuild boundary scan therefore checks whether those literal values entered the actual `.next/static` or `.next/server` output. CI then runs the boundary checker once more with the same synthetic values. This does not expose real provider credentials or require AI keys for the weather dashboard.
