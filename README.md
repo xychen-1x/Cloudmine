@@ -1,43 +1,56 @@
 # Weathercast
 
-A non-commercial, ad-free, Philippines-first weather companion built in reviewed phases.
+A non-commercial, ad-free, Philippines-first weather dashboard built with Next.js App Router and TypeScript.
 
-## Phase 1
+## Current Phase 2 features
 
-This phase provides a minimal Next.js scaffold and a server-only AI provider abstraction. It intentionally has no weather fetching, public AI endpoint, city search, caching, rate limiting, PAGASA integration, or finished dashboard UI. AI library code is not reachable from the page or any HTTP entry point.
-
-Fresh implementation from `main`; unrelated to closed PR #1.
+- Search Philippine cities and towns using Open-Meteo Geocoding (GeoNames location data).
+- View model-derived current conditions: temperature, feels-like temperature, humidity and WMO weather description.
+- View the next 24 hours: temperature, precipitation probability, precipitation amount and weather description.
+- View a seven-day forecast: daily high/low temperature, precipitation probability and weather description.
+- Show the Open-Meteo HTTP response age separately from weather valid time; hide current conditions when the response is older than 90 minutes and forecasts when it is older than six hours or the response timestamp cannot be verified.
+- Use the Next.js Data Cache for geocoding (24-hour TTL candidate) and forecast data (600 seconds), with an on-demand ISR city page.
+- Keep the existing Phase 1 AI provider abstraction isolated. Phase 2 weather routes do not call Gemini or Groq and do not require AI API keys.
 
 ## Requirements
 
-- Node.js 20.9 or newer
+- Node.js 22.x
 - npm
-- Gemini API key for the primary provider
-- Optional Groq API key for fallback only
 
-Copy `.env.example` to `.env.local` and set `GEMINI_API_KEY`. `GROQ_API_KEY` is optional. `AI_PROVIDER` defaults to `gemini`; unsupported values are rejected. Groq is never promoted to primary.
+## Setup
 
-## Commands
+```bash
+npm ci
+npm run dev
+```
 
-- `npm run dev`
-- `npm run lint`
-- `npm run typecheck`
-- `npm test`
-- `npm run build`
-- `npm run check:build` (after a successful build)
+## Quality checks
 
-## Privacy
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npm run check:build
+```
 
-The AI layer sends only a location label, allowlisted weather values, and the user's question/context. It does not accept latitude/longitude fields. Free-text coordinate redaction is best-effort and cannot reliably remove every address, landmark, Plus Code, what3words reference, written-out coordinate, or obfuscated location. Do not include personal or sensitive information in questions.
+The build command runs lint, typecheck, unit tests and the production build boundary check through its prebuild/postbuild hooks. The standalone `npm run check:build` command requires a successful `.next` build first.
 
-Gemini free-tier requests may be used by Google to improve its products. If Groq fallback is enabled, eligible failures can send the same minimized request to Groq. Review each provider's current terms and privacy settings before using real personal data. API keys remain server-side and are never logged.
+## Data sources, licence and attribution
 
-Weathercast does not claim AI explanations are official forecasts or alerts. Future phases must display provider weather data separately from AI-generated explanations and must not let AI invent weather measurements or warnings.
+- Weather: Open-Meteo standard Forecast API. Weather data is provided under CC BY 4.0; the UI links to Open-Meteo and distinguishes weather valid time from HTTP response age. The Best Match endpoint does not expose the selected model run age.
+- Location search: Open-Meteo Geocoding API, which uses GeoNames data. The UI attributes GeoNames.
+- The Open-Meteo free/open-access API is for non-commercial use, has a 10,000 equivalent-call daily limit and 300,000 monthly limit, and has no uptime guarantee. Weathercast must remain non-commercial and ad-free under this integration.
+- Weathercast Phase 2 does not integrate PAGASA CAP alerts. Open-Meteo model values are not official PAGASA warnings.
 
-## Model selection
+## Phase boundaries and AI safety
 
-The implementation uses Gemini model `gemini-3.5-flash-lite` and Groq model `openai/gpt-oss-20b`, checked against provider documentation on 2026-11-24. Google's current pricing page lists Gemini 3.5 Flash-Lite with Standard free-tier input/output pricing. Google states free-tier requests may be used to improve its products. Actual access, quotas, geographic availability, capacity, and account requirements can change and are not guaranteed. No live provider call has been performed as part of this phase.
+The Phase 1 AI provider abstraction is retained server-side but is not used by Phase 2 weather pages or the public location-search API. No AI-generated measurements, forecasts or official warnings are permitted.
 
-## Attribution
+Future PAGASA or AI explanation integrations require separate planning and Owner approval. Any future AI explanation may only explain supplied, provenance-labeled weather data and must remain separate from weather values and official warnings.
 
-Open-Meteo weather integration is not part of Phase 1. When added, its required attribution and non-commercial terms must be respected.
+## Privacy and security
+
+No accounts, GPS permission, database, public AI endpoint, advertising or paid API are part of Phase 2. API keys are not required to use the weather dashboard. Do not commit local environment files or provider secrets.
+
+See [docs/PHASE2-OPERATIONS.md](docs/PHASE2-OPERATIONS.md) for cache settings, API request weighting, operational risks and verification requirements.
