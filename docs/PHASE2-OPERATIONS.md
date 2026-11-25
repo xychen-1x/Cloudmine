@@ -1,7 +1,7 @@
 # Weathercast Phase 2 — Operational and Verification Notes
 
-**Status:** Implementation notes for approved Phase 2  
-**Scope:** P2.0–P2.5 only
+**Status:** Phase 2 implementation and verification scope approved for closure; Owner acceptance of residual risks R-1–R-5 recorded November 25, 2026.  
+**Scope:** P2.0–P2.5 only. PR merge and Production deployment remain separate decisions requiring explicit Owner authorization.
 
 ## Upstream data and request budget
 
@@ -16,10 +16,9 @@ The standard Open-Meteo Forecast API request uses one Philippine location and se
 
 Open-Meteo's free non-commercial tier counts requests using more than ten weather variables at a fractional equivalent-call weight. With 12 selected variables for one location and seven days, the planned weight is **1.2 equivalent calls per forecast HTTP request**. This is recorded in `src/lib/weather/forecast.ts` and covered by a unit test.
 
-At the target of one forecast HTTP request per city per ten-minute window:
-- 100 same-city page views within ten minutes should generate no more than one forecast HTTP request in the tested region.
-- That request represents approximately 1.2 equivalent Open-Meteo calls.
-- At continuous traffic, one city revalidated six times per hour for 24 hours would represent approximately 172.8 equivalent calls per day. This is a capacity illustration, not a traffic forecast.
+The intended cache design is to reuse the city ISR page and cached forecast data during the 600-second freshness window. The same-city test below demonstrated page-level Vercel cache hits, but it did **not** instrument or measure upstream Open-Meteo HTTP requests. Therefore, the test does not establish a maximum of one upstream forecast request per ten minutes, and no exact upstream-call guarantee is claimed.
+
+For capacity planning only, **if** one upstream forecast HTTP request were made per city per ten-minute window, its estimated weight would be approximately 1.2 equivalent Open-Meteo calls. Under that explicit assumption, six requests per hour for 24 hours would represent approximately 172.8 equivalent calls per city per day. This is an illustration, not a measured usage result or traffic forecast.
 
 Open-Meteo's free tier is non-commercial, capped at 10,000 equivalent calls per day and 300,000 per month, and has no uptime SLA. The project must remain non-commercial and show Open-Meteo attribution. Monitor actual usage rather than treating the cap as a guaranteed operating budget.
 
@@ -35,7 +34,7 @@ The implementation deliberately starts with the Next.js Data Cache via `fetch(..
 - Forecast request: 600 seconds.
 - The city page is generated on demand and uses a 600-second ISR revalidation interval.
 - The dynamic city page uses an empty `generateStaticParams()` result with default dynamic params, so arbitrary valid GeoNames IDs are generated on first request and then cached as ISR paths.
-- Vercel request collapsing is expected only for eligible ISR page paths and only within the tested region. It does not apply to the `/api/locations` search handler.
+- Request-collapsing discussion is limited to eligible ISR page paths. The load evidence in this record is limited to one same-city ISR route in `iad1`; it does not establish cross-instance, cross-region, or global behavior. It does not apply to the `/api/locations` search handler or other non-ISR paths.
 
 Do not switch to `use cache: remote` or enable Cache Components as part of this implementation. Reconsider only after confirming the exact resolved Next.js version, Vercel Runtime Cache migration status, included usage, and deployment Build ID behavior. A new Next.js build changes the Build ID in `use cache` keys and can cause a cold-cache refill.
 
@@ -75,7 +74,7 @@ The browser recalculates response age every minute. Next.js Data Cache and the p
 
 `GET /api/locations?q=...` is a public endpoint. Validation, a maximum query length, a Philippines-only upstream filter, a maximum of eight results, and a 24-hour upstream fetch cache reduce ordinary load.
 
-However, different arbitrary query strings can create distinct cache keys. No global $0 rate limiter is currently configured. Any process-local limiter would not be global across serverless instances, so this residual abuse risk is explicitly accepted for Phase 2 and must be reviewed against actual traffic and Open-Meteo usage. Do not claim global rate limiting.
+However, different arbitrary query strings can create distinct cache keys. No global/distributed rate limiter is currently configured. Any process-local limiter would not be global across serverless instances. The Owner explicitly accepted this residual abuse/quota-exhaustion risk for the non-commercial Phase 2 MVP on November 25, 2026 (see the closure decision below). No rate-limiting mitigation was added as part of Phase 2. Review actual traffic and Open-Meteo usage; do not claim global rate limiting.
 
 ## Rate-limit backoff
 
@@ -134,8 +133,9 @@ The 403 responses were rejected by the Vercel Deployment Protection/access layer
 
 The temporary Vercel Sandbox used for this test was stopped and deleted. A temporary Vercel share link was used to authenticate access to the protected Preview; it expires automatically. No project setting or deployment protection policy was changed.
 
-### Current Preview deployment reference
+### Preview deployment references
 
+**Implementation Preview used for the cache/load test**
 - Deployment ID: `dpl_EpbsheEgesepV8uePSvJyegoXe21`
 - URL: https://cloudmine-8wkc1oup9-xychen.vercel.app
 - State: **READY**
@@ -143,7 +143,54 @@ The temporary Vercel Sandbox used for this test was stopped and deleted. A tempo
 - Branch/commit: `phase-2/weather-dashboard` / `446d1aa27dad758d3a2bc3adc9f8af94eab9c8d6`
 - Region: `iad1`
 
-This is the preserved reference deployment for final Phase 2 review. Do not trigger another deployment solely to repeat already-passed checks. Any final documentation commit may cause the Git-connected Preview workflow to create a new Preview; verify its status before replacing this reference.
+**Latest Preview before this closure-record commit**
+- Deployment ID: `dpl_EtUbUsdpGAYo9nMuGjvczLQhoBvc`
+- URL: https://cloudmine-e34d6hozr-xychen.vercel.app
+- State: **READY**
+- Environment: Preview (not Production)
+- Branch/commit: `phase-2/weather-dashboard` / `9c4644785210a03b08f9056eb0a3eed22c5b9bbf`
+- Region: `iad1`
+
+The first deployment is the preserved cache-test target; the second is the later documentation-only review Preview. They are distinct deployments and must not be conflated. The final documentation commit may trigger one new Preview; verify that deployment and the corresponding CI before treating this closure record as fully validated. Do not trigger additional deployments solely to repeat already-passed checks.
+
+## Independent review and Phase 2 closure decision (November 25, 2026)
+
+### Independent technical review
+
+DeepSeek's independent review of PR #4 at head commit `9c4644785210a03b08f9056eb0a3eed22c5b9bbf` returned **APPROVE WITH CONDITIONS**. It reported no critical findings and no implementation-code blocker. Its required conditions were documentation precision and explicit Owner acceptance of residual risks; no code mitigation was required for the non-commercial Phase 2 MVP.
+
+### Owner decision: residual risks R-1–R-5 accepted
+
+On November 25, 2026, the Owner explicitly approved acceptance of all five documented residual risks for Phase 2 closure:
+
+| Risk | Evidence and scope | Owner decision |
+|---|---|---|
+| **R-1 — Exact upstream request count unmeasured** | The test observed 104 successful same-route HTTP 200 responses with `x-vercel-cache: HIT` in `iad1` during the ten-minute window. The exact number of upstream Open-Meteo HTTP requests was not independently measured. The 1.2 equivalent-call weight is an estimate based on 12 selected variables, not a provider-side usage measurement. | **Accepted.** Treat page-cache reuse as demonstrated; do not claim that exactly one upstream request occurred. |
+| **R-2 — No global rate limiter on `/api/locations`** | The public endpoint validates input and uses a 24-hour fetch cache, but has no global/distributed rate limiter. Distinct arbitrary query strings can create distinct cache keys and could be used to consume the Open-Meteo geocoding free-tier quota. | **Accepted.** This non-commercial MVP retains the documented abuse/quota risk. No rate-limiting mitigation was added. Monitor actual traffic and provider usage. |
+| **R-3 — Cross-instance and cross-region behavior unverified** | Cache/load testing was performed only in region `iad1`, against one city ISR route. Sharing/coordination between separate function instances or regions was not verified. | **Accepted.** Do not generalize the test to cross-instance, cross-region, or global cache behavior. |
+| **R-4 — No migration to Vercel Runtime Cache / Cache Components** | The implementation uses Next.js Data Cache and city-page ISR. It has not migrated to Vercel Runtime Cache / Cache Components. Vercel Remote Build Cache is a separate mechanism. | **Accepted.** No migration is required for Phase 2; revisit only through a separately reviewed future change if the deployment architecture or product requirements warrant it. |
+| **R-5 — Open-Meteo free tier has no uptime SLA** | The project depends on the Open-Meteo free non-commercial service, which documents no uptime SLA. | **Accepted.** The project remains non-commercial, retains attribution, and accepts the provider-availability limitation for this MVP. |
+
+### Limits that remain part of the accepted evidence
+
+- The cache test demonstrates **104 page-level Vercel cache hits in `iad1`** for the same city route within the ten-minute window. The exact number of upstream Open-Meteo HTTP requests was not independently measured; this evidence does not prove a single upstream call.
+- Only `iad1` was tested. Cross-instance and cross-region cache sharing remain unverified.
+- Any request-collapsing claim is limited to eligible ISR page paths and the tested region. It does not apply to `/api/locations` or non-ISR paths.
+- The 28 + 68 HTTP 403 responses were Vercel Deployment Protection/access-layer rejections, not application failures. Protection settings were not disabled or changed.
+- The 1.2 equivalent-call figure is a request-weight estimate, not a measured provider-side call count.
+
+### Closure decision and approval boundaries
+
+**Owner decision:** Approve Phase 2 closure with the residual risks R-1 through R-5 accepted as recorded above. The independent review's documentation conditions are addressed by this record and the corrected Preview/capacity descriptions.
+
+This closure applies only to the approved Phase 2 implementation and verification scope (P2.0–P2.5). It does **not** authorize:
+- merging PR #4 into `main`;
+- changing PR #4 from Draft to Ready for review;
+- deploying to Production or promoting a Preview deployment;
+- changing Vercel project settings or Deployment Protection;
+- implementing Phase 3 features in this PR.
+
+Each of those actions remains a separate decision requiring explicit Owner authorization. PR #4 remains Draft and unmerged until separately authorized.
 
 ## Dependency security audit and toolchain resolution (updated November 25, 2026)
 
